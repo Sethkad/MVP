@@ -5,7 +5,7 @@ const path = require('path');
 const fetch = require('node-fetch');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Use environment variable for port
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
@@ -44,11 +44,7 @@ async function getBusinessInfo(ipAddress) {
       throw new Error(`IPinfo API error: ${response.statusText}`);
     }
     const data = await response.json();
-
-    // Log the full IPinfo response to debug
     console.log('IPinfo data:', data);
-
-    // Return the 'org' field if available, otherwise default to 'Unknown Business'
     return data.org || 'Unknown Business';
   } catch (error) {
     console.error('Error fetching business info from IPinfo:', error);
@@ -65,15 +61,11 @@ async function getDomainInfo(domain) {
       throw new Error(`Hunter.io API error: ${response.statusText}`);
     }
     const data = await response.json();
-
-    // Log the full Hunter.io response for debugging
     console.log('Hunter.io data:', data);
-
-    // Return the relevant information (e.g., names, emails)
-    return data.data || {}; // Return domain-related information
+    return data.data || {};
   } catch (error) {
     console.error('Error fetching domain info from Hunter.io:', error);
-    return {}; // Return an empty object if the request fails
+    return {};
   }
 }
 
@@ -88,16 +80,11 @@ app.post('/track', async (req, res) => {
   console.log('Received data:', data);
 
   try {
-    // Get business information based on the IP address
     const businessInfo = await getBusinessInfo(data.ipAddress);
 
-    // If you have a domain, enrich with Hunter.io data
-    let domainInfo = {};
-    if (data.ipAddress) {
-      // Example: You might extract domain from the IP or use a fixed domain
-      const domain = 'example.com'; // Replace with actual domain extraction logic if needed
-      domainInfo = await getDomainInfo(domain);
-    }
+    // Example: Extract domain from request or use a fixed domain
+    const domain = data.domain || (req.headers.referer ? new URL(req.headers.referer).hostname : 'example.com');
+    const domainInfo = await getDomainInfo(domain);
 
     // Save the data to MongoDB
     const newTrackingData = new TrackingData({
@@ -105,6 +92,7 @@ app.post('/track', async (req, res) => {
       businessInfo: businessInfo,
       domainInfo: domainInfo // Save the domain info from Hunter.io
     });
+
     const savedData = await newTrackingData.save();
     console.log('Data saved to MongoDB:', savedData);
     res.status(200).json({ message: 'Data received and saved successfully' });
