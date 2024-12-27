@@ -1,5 +1,4 @@
 require('dotenv').config();
-
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -30,7 +29,8 @@ const trackingSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   localTime: String, // Client's local time
   timezone: String,  // Client's timezone
-  businessInfo: String // Business info from IPinfo
+  businessInfo: String, // Business info from IPinfo
+  domainInfo: Object // Domain info from Hunter.io
 });
 
 const TrackingData = mongoose.model('TrackingData', trackingSchema);
@@ -56,6 +56,27 @@ async function getBusinessInfo(ipAddress) {
   }
 }
 
+// Function to query Hunter.io Domain Search API
+async function getDomainInfo(domain) {
+  const hunterApiKey = process.env.HUNTER_API_KEY; // Hunter.io API Key
+  try {
+    const response = await fetch(`https://api.hunter.io/v2/domain-search?domain=${domain}&api_key=${hunterApiKey}`);
+    if (!response.ok) {
+      throw new Error(`Hunter.io API error: ${response.statusText}`);
+    }
+    const data = await response.json();
+
+    // Log the full Hunter.io response for debugging
+    console.log('Hunter.io data:', data);
+
+    // Return the relevant information (e.g., names, emails)
+    return data.data || {}; // Return domain-related information
+  } catch (error) {
+    console.error('Error fetching domain info from Hunter.io:', error);
+    return {}; // Return an empty object if the request fails
+  }
+}
+
 // Serve the HTML file
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'testfile.html'));
@@ -70,10 +91,19 @@ app.post('/track', async (req, res) => {
     // Get business information based on the IP address
     const businessInfo = await getBusinessInfo(data.ipAddress);
 
+    // If you have a domain, enrich with Hunter.io data
+    let domainInfo = {};
+    if (data.ipAddress) {
+      // Example: You might extract domain from the IP or use a fixed domain
+      const domain = 'example.com'; // Replace with actual domain extraction logic if needed
+      domainInfo = await getDomainInfo(domain);
+    }
+
     // Save the data to MongoDB
     const newTrackingData = new TrackingData({
       ...data,
-      businessInfo: businessInfo
+      businessInfo: businessInfo,
+      domainInfo: domainInfo // Save the domain info from Hunter.io
     });
     const savedData = await newTrackingData.save();
     console.log('Data saved to MongoDB:', savedData);
