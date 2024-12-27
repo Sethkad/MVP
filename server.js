@@ -44,7 +44,12 @@ async function getBusinessInfo(ipAddress) {
       throw new Error(`IPinfo API error: ${response.statusText}`);
     }
     const data = await response.json();
-    return data.org || 'Unknown Business'; // Return the organization name or a fallback
+
+    // Log the full IPinfo response to debug
+    console.log('IPinfo data:', data);
+
+    // Return the 'org' field if available, otherwise default to 'Unknown Business'
+    return data.org || 'Unknown Business';
   } catch (error) {
     console.error('Error fetching business info from IPinfo:', error);
     return 'Unknown Business';
