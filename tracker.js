@@ -5,7 +5,7 @@ fetch('https://api.ipify.org?format=json')
     const ipAddress = data.ip;
 
     // Send the collected data to your server
-    fetch('https://mvp-6207.onrender.com', {
+    fetch('https://mvp-6207.onrender.com/track', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
